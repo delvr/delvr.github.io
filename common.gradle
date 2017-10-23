@@ -16,6 +16,8 @@ task wrapper(type: Wrapper) {
     gradleVersion = gradleWrapperVersion
 }
 
+apply plugin: "scala"
+
 if(modId != farseekModId) {
     repositories {
         maven { url "https://jitpack.io"
@@ -26,8 +28,6 @@ if(modId != farseekModId) {
         compile "org.bitbucket.TheDelver:farseek2:master-SNAPSHOT" //:deobf" //todo change to github w versioning
     }
 }
-
-apply plugin: "scala"
 
 ext.coreModClass = "farseek.core.FarseekCoreMod"
 def jvmArgs = "-Dfml.coreMods.load=$coreModClass"
@@ -42,9 +42,8 @@ minecraft {
 }
 String mcVersion = minecraft.version
 
-def readmeTemplate = file((modId == farseekModId? "": "$farseekUrl") +"README-template.md")
 task readme { copy {
-    from readmeTemplate
+    from file((modId == farseekModId? "": "$farseekUrl") +"README-template.md")
     into "."
     rename { "README.md" }
     expand modId: modId, modName: modName, modDescription: modDescription, modLogoFile: modLogoFile, modUrl: modUrl
