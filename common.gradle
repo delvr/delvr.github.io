@@ -26,7 +26,8 @@ if(modId != farseekModId) {
         }
     }
     dependencies {
-        compile "org.bitbucket.TheDelver:farseek2:$farseekVersion-SNAPSHOT" //:deobf" //todo change to github
+        compile "org.bitbucket.TheDelver:farseek2:$farseekVersion-SNAPSHOT:deobf" //todo change to github
+        compile "org.bitbucket.TheDelver:farseek2:$farseekVersion-SNAPSHOT:sources"
     }
 }
 
