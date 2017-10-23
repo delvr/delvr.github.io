@@ -1,0 +1,136 @@
+import groovy.json.JsonBuilder
+import groovy.json.JsonOutput
+
+def modName = project.name
+def modId = modName.toLowerCase()
+def farseekModId = "farseek"
+def modAuthorList = modAuthors.split(";")
+def modDependencyList = modDependencies.split(";")
+def modLogoFile = "${modId}_logo.png"
+def modUpdateJson = "update.json"
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Update
+// ---------------------------------------------------------------------------------------------------------------------
+task wrapper(type: Wrapper) {
+    gradleVersion = gradleWrapperVersion
+}
+
+if(modId != farseekModId) {
+    repositories {
+        maven { url "https://jitpack.io"
+                credentials { username authToken } //todo change to github
+        }
+    }
+    dependencies {
+        compile "org.bitbucket.TheDelver:farseek2:master-SNAPSHOT" //:deobf" //todo change to github w versioning
+    }
+}
+
+apply plugin: "scala"
+
+ext.coreModClass = "farseek.core.FarseekCoreMod"
+def jvmArgs = "-Dfml.coreMods.load=$coreModClass"
+apply plugin: "net.minecraftforge.gradle.forge"
+minecraft {
+    version = forgeRevision
+    mappings = mcpMappings
+    useDepAts = true
+    runDir = "run"
+    clientJvmArgs += jvmArgs
+    serverJvmArgs += jvmArgs
+}
+String mcVersion = minecraft.version
+
+def readmeTemplate = file((modId == farseekModId? "": "$farseekUrl") +"README-template.md")
+task readme { copy {
+    from readmeTemplate
+    into "."
+    rename { "README.md" }
+    expand modId: modId, modName: modName, modDescription: modDescription, modLogoFile: modLogoFile, modUrl: modUrl
+}}
+
+ext.writeJsonFile = { File dir, String name, Object contents ->
+    dir.mkdirs()
+    new File(dir, name).text = JsonOutput.prettyPrint(new JsonBuilder(contents).toString())
+}
+task modInfo { writeJsonFile(sourceSets.main.resources.srcDirs[0], "mcmod.info", [{
+    modid        modId
+    version      modVersion
+    name         modName
+    description  modDescription
+    logoFile     modLogoFile
+    url          modUrl
+    authorList   modAuthorList
+    requiredMods modDependencyList
+    dependencies modDependencyList
+    useDependencyInformation true
+    if(project.hasProperty("githubUser"))
+        updateJson "https://raw.githubusercontent.com/$githubUser/$modName/blob/$mcVersion/$modUpdateJson"
+}])}
+
+tasks.setupDecompWorkspace.dependsOn(readme, modInfo)
+
+apply plugin: "idea"
+idea.module.excludeDirs += files(".idea", "gradle", "libs", "run")
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Build
+// ---------------------------------------------------------------------------------------------------------------------
+version = "$mcVersion-$modVersion"
+
+jar.manifest.attributes "FMLAT": "${modId}_at.cfg"
+
+task deobfJar(type: Jar) {
+    manifest = jar.manifest
+    classifier = "deobf"
+    from sourceSets.main.output
+}
+
+tasks.jar.dependsOn(deobfJar)
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Release
+// ---------------------------------------------------------------------------------------------------------------------
+task release {}
+
+def changeLog = file("changelog.md").text
+def releaseChangeLog = changeLog + """
+Built using [Forge](http://files.minecraftforge.net/maven/net/minecraftforge/forge/index_${minecraft.version}.html) ${minecraft.forgeVersion} and [MCP mappings](http://export.mcpbot.bspk.rs) ${minecraft.mappings}.
+"""
+
+// JitPack: https://jitpack.io/docs/BUILDING/
+apply plugin: "maven-publish"
+publishing.publications {
+    jars(MavenPublication) { artifacts = [deobfJar, sourceJar] }
+}
+
+if(project.hasProperty("githubUser") && project.hasProperty("githubApiKey")) {
+    task gitHubRelease {
+        writeJsonFile(projectDir, modUpdateJson, {
+            homepage modUrl
+            promos {
+                "${mcVersion}_latest" modVersion
+                "${mcVersion}_recommended" modVersion
+            }
+            "$mcVersion" { modVersion changeLog }
+        })
+        //todo other plugin, + source artifacts.
+    }
+    tasks.release.dependsOn(gitHubRelease)
+}
+
+if(project.hasProperty("curseForgeId") && project.hasProperty("curseForgeApiKey")) {
+    apply plugin: "com.matthewprenger.cursegradle"
+    curseforge {
+        apiKey = curseForgeApiKey
+        project {
+            id = curseForgeId
+            releaseType = curseForgeReleaseType
+            changelog = releaseChangeLog
+            changelogType = "markdown"
+            if(modId != farseekModId) relations { requiredLibrary farseekModId }
+        }
+    }
+    tasks.release.dependsOn(curseforge)
+}
