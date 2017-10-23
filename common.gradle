@@ -8,6 +8,7 @@ def modAuthorList = modAuthors.split(";")
 def modDependencyList = modDependencies.split(";")
 def modLogoFile = "${modId}_logo.png"
 def modUpdateJson = "update.json"
+def readmeTemplate = "README-template.md"
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Update
@@ -42,8 +43,12 @@ minecraft {
 }
 String mcVersion = minecraft.version
 
+def readmeTemplateFile = new File(readmeTemplate)
+if (!readmeTemplateFile.exists()) {
+    new URL("$farseekLocation/$farseekVersion/$readmeTemplate").withInputStream{i -> readmeTemplateFile.withOutputStream{it << i}}
+}
 task readme { copy {
-    from file((modId == farseekModId? "": "$farseekLocation/$farseekVersion/") +"README-template.md")
+    from readmeTemplateFile
     into "."
     rename { "README.md" }
     expand modId: modId, modName: modName, modDescription: modDescription, modLogoFile: modLogoFile, modUrl: modUrl
