@@ -1,0 +1,17 @@
+repositories {
+    maven { url "https://jitpack.io"
+        credentials { username authToken } //todo change to github
+    }
+}
+dependencies {
+    compile "org.bitbucket.TheDelver:farseek2:master-SNAPSHOT"//:deobf"
+    //compile "org.bitbucket.TheDelver:farseek2:master-SNAPSHOT:sources"
+}
+ant.unzip(src: configurations.compile.asFileTree.include("**/*farseek*sources.jar").singleFile, dest: farseekScriptDir)
+
+apply from: "$farseekScriptDir/common.gradle"
+
+if(project.hasProperty("curseForgeId") && project.hasProperty("curseForgeApiKey")) {
+    apply plugin: "com.matthewprenger.cursegradle"
+    curseforge.project.relations { requiredLibrary "farseek" }
+}
