@@ -1,9 +1,0 @@
-repositories {
-    maven { url "https://plugins.gradle.org/m2/" }
-    maven { url "http://files.minecraftforge.net/maven" }
-}
-dependencies {
-    classpath "net.minecraftforge.gradle:ForgeGradle:2.3-SNAPSHOT"
-    classpath "net.researchgate:gradle-release:2.6.0"
-    classpath "gradle.plugin.com.matthewprenger:CurseGradle:1.0.9"
-}
